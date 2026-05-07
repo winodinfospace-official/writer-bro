@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Writer Bro — Kannada Screenplay Writer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=JetBrains+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&family=Noto+Sans+Kannada:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="logo">Writer Bro</div>
+  <div class="topbar-sep"></div>
+  <input id="titleInput" class="title-input" type="text" placeholder="ಅಶೀರ್ಷಿಕೆ" value="ಮನೆಗೆ ಮರಳಿ">
+  <div class="topbar-right">
+    <button class="btn" id="btnShortcuts">⌨ Shortcuts</button>
+    <button class="btn" id="btnNew">New</button>
+    <button class="btn" id="btnOpen">Open</button>
+    <button class="btn" id="btnExport">Export PDF</button>
+    <button class="btn btn-primary" id="btnSave">Save</button>
+  </div>
+</div>
+
+<!-- WORKSPACE -->
+<div class="workspace">
+
+  <!-- LEFT SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-header">Scenes</div>
+    <div class="scene-list" id="sceneList"></div>
+    <div class="sidebar-bottom">
+      <div class="kannada-note">
+        💡 Enable Kannada keyboard via Windows Settings → Time &amp; Language → Language → Add Kannada
+      </div>
+    </div>
+  </div>
+
+  <!-- EDITOR -->
+  <div class="editor-area">
+    <div class="script-page" id="scriptPage">
+      <div class="page-header">
+        <input class="page-title" id="pageTitleInput" type="text" placeholder="ಚಿತ್ರಕಥೆಯ ಶೀರ್ಷಿಕೆ" value="ಮನೆಗೆ ಮರಳಿ">
+        <input class="page-subtitle" id="pageAuthorInput" type="text" placeholder="Written by / ಬರೆದವರು:">
+      </div>
+      <div id="scriptBlocks"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="block-panel">
+    <div class="panel-header">Block Type</div>
+    <div class="block-types">
+      <button class="block-type-btn bt-scene active" data-type="scene" id="btnType-scene">
+        <span class="bt-label">Scene Heading</span>
+        <span class="bt-hint">Ctrl+1</span>
+      </button>
+      <button class="block-type-btn bt-action" data-type="action" id="btnType-action">
+        <span class="bt-label">Action</span>
+        <span class="bt-hint">Ctrl+2</span>
+      </button>
+      <button class="block-type-btn bt-character" data-type="character" id="btnType-character">
+        <span class="bt-label">Character</span>
+        <span class="bt-hint">Ctrl+3</span>
+      </button>
+      <button class="block-type-btn bt-dialogue" data-type="dialogue" id="btnType-dialogue">
+        <span class="bt-label">Dialogue</span>
+        <span class="bt-hint">Ctrl+4</span>
+      </button>
+      <button class="block-type-btn bt-parenthetical" data-type="parenthetical" id="btnType-parenthetical">
+        <span class="bt-label">Parenthetical</span>
+        <span class="bt-hint">Ctrl+5</span>
+      </button>
+      <button class="block-type-btn bt-transition" data-type="transition" id="btnType-transition">
+        <span class="bt-label">Transition</span>
+        <span class="bt-hint">Ctrl+6</span>
+      </button>
+    </div>
+    <div class="panel-footer-hint">
+      <div style="color:var(--text-dim);font-size:11px;font-weight:500;margin-bottom:6px">Keyboard</div>
+      <div class="hint-row"><span class="hint-key">Enter</span><span>new block</span></div>
+      <div class="hint-row"><span class="hint-key">Tab</span><span>change type</span></div>
+      <div class="hint-row"><span class="hint-key">⌫</span><span>delete empty</span></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<div class="footbar">
+  <div class="foot-item"><span class="foot-dot" style="background:var(--scene)"></span><span id="statScenes">0 scenes</span></div>
+  <div class="foot-item"><span class="foot-dot" style="background:var(--dialogue)"></span><span id="statWords">0 words</span></div>
+  <div class="foot-item"><span class="foot-dot" style="background:var(--text-faint)"></span><span id="statPages">~1 page</span></div>
+  <div style="margin-left:auto;color:var(--accent);font-size:10px;font-family:'JetBrains Mono',monospace">✓ Kannada Unicode Ready</div>
+</div>
+
+<!-- SHORTCUTS POPUP -->
+<div class="shortcut-overlay" id="shortcutOverlay">
+  <div class="shortcut-box">
+    <div class="shortcut-title">Keyboard Shortcuts</div>
+    <div class="shortcut-grid">
+      <span class="sc-key">Enter</span><span class="sc-desc">New block</span>
+      <span class="sc-key">Tab</span><span class="sc-desc">Cycle block type forward</span>
+      <span class="sc-key">Shift+Tab</span><span class="sc-desc">Cycle block type back</span>
+      <span class="sc-key">Ctrl+1</span><span class="sc-desc">Scene Heading</span>
+      <span class="sc-key">Ctrl+2</span><span class="sc-desc">Action</span>
+      <span class="sc-key">Ctrl+3</span><span class="sc-desc">Character</span>
+      <span class="sc-key">Ctrl+4</span><span class="sc-desc">Dialogue</span>
+      <span class="sc-key">Ctrl+5</span><span class="sc-desc">Parenthetical</span>
+      <span class="sc-key">Ctrl+6</span><span class="sc-desc">Transition</span>
+      <span class="sc-key">Ctrl+S</span><span class="sc-desc">Save to browser</span>
+      <span class="sc-key">Backspace</span><span class="sc-desc">Delete empty block</span>
+    </div>
+    <button class="btn close-btn" id="btnCloseShortcuts">Close</button>
+  </div>
+</div>
+
+<!-- OPEN FILE POPUP -->
+<div class="shortcut-overlay" id="openOverlay">
+  <div class="shortcut-box">
+    <div class="shortcut-title">Open Script</div>
+    <div id="savedScriptsList" style="max-height:300px;overflow-y:auto;margin-bottom:16px"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" id="btnImportFile" style="flex:1">Import .wbs file</button>
+      <button class="btn close-btn" id="btnCloseOpen" style="flex:1;margin-top:0">Cancel</button>
+    </div>
+    <input type="file" id="fileInput" accept=".wbs,.json" style="display:none">
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
