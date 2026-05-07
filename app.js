@@ -1,4 +1,4 @@
-// Writer Bro — app.js
+// Writer Bro — app.js v1.1
 // Kannada Screenplay Writer — Browser Version
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -32,6 +32,8 @@ const PLACEHOLDERS = {
   transition: 'CUT TO: / FADE OUT.',
 };
 
+const AUTOSAVE_INTERVAL = 30000;
+
 // ── State ─────────────────────────────────────────────────────────────────────
 
 let state = {
@@ -44,6 +46,7 @@ let state = {
 };
 
 let focusedBlockId = null;
+let autosaveTimer = null;
 
 // ── ID Generator ──────────────────────────────────────────────────────────────
 
@@ -148,6 +151,7 @@ function createBlockEl(block) {
     renderSceneList();
     renderStats();
     renderTitle();
+    scheduleAutosave();
   });
 
   ta.addEventListener('focus', () => {
@@ -239,6 +243,7 @@ function handleKey(e, blockId, ta) {
       return;
     }
     if (e.key === 's') { e.preventDefault(); saveToStorage(); return; }
+    if (e.key === 'd') { e.preventDefault(); downloadScript(); return; }
   }
 }
 
@@ -258,13 +263,14 @@ function autoResize(ta) {
   ta.style.height = ta.scrollHeight + 'px';
 }
 
-// ── localStorage Save / Load ──────────────────────────────────────────────────
+// ── Serialize ─────────────────────────────────────────────────────────────────
 
 function toJSON() {
   return JSON.stringify({
     version: 1,
     title: state.title,
     author: state.author,
+    savedAt: new Date().toISOString(),
     blocks: state.blocks,
   }, null, 2);
 }
@@ -276,21 +282,58 @@ function fromJSON(json) {
   state.blocks = data.blocks || [];
   state.idSeq  = state.blocks.length + 1;
   state.dirty  = false;
-  document.getElementById('titleInput').value     = state.title;
-  document.getElementById('pageTitleInput').value = state.title;
+  document.getElementById('titleInput').value      = state.title;
+  document.getElementById('pageTitleInput').value  = state.title;
   document.getElementById('pageAuthorInput').value = state.author;
 }
+
+// ── Download Script to Laptop ─────────────────────────────────────────────────
+
+function downloadScript() {
+  const json = toJSON();
+  const blob = new Blob([json], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const filename = (state.title || 'screenplay').replace(/[^a-zA-Z0-9ಅ-ೞ\s]/g, '').trim() + '.wbs';
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+  state.dirty = false;
+  renderTitle();
+  showToast('Downloaded ✓ — ' + filename);
+}
+
+// ── Upload Script from Laptop ─────────────────────────────────────────────────
+
+function uploadScript(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      fromJSON(e.target.result);
+      state.dirty = false;
+      render();
+      hideOverlay('openOverlay');
+      showToast('Script loaded ✓');
+    } catch {
+      alert('Could not read file. Make sure it is a valid .wbs file.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ── localStorage Save / Load ──────────────────────────────────────────────────
 
 function saveToStorage() {
   const key = 'wb_' + state.title.replace(/\s+/g, '_');
   state.currentScriptKey = key;
   localStorage.setItem(key, toJSON());
-  // Save index
   const idx = JSON.parse(localStorage.getItem('wb_index') || '[]');
   if (!idx.includes(key)) { idx.push(key); localStorage.setItem('wb_index', JSON.stringify(idx)); }
   state.dirty = false;
   renderTitle();
-  showToast('Saved ✓');
+  showToast('Saved to browser ✓');
 }
 
 function loadFromStorage(key) {
@@ -312,18 +355,21 @@ function deleteFromStorage(key) {
 function renderOpenList() {
   const idx = JSON.parse(localStorage.getItem('wb_index') || '[]');
   const container = document.getElementById('savedScriptsList');
+
   if (idx.length === 0) {
-    container.innerHTML = '<div style="color:var(--text-faint);font-size:12px;padding:8px">No saved scripts yet.</div>';
+    container.innerHTML = '<div style="color:var(--text-faint);font-size:12px;padding:8px 0">No saved scripts in browser yet.</div>';
     return;
   }
+
   container.innerHTML = idx.map(key => {
     const data = JSON.parse(localStorage.getItem(key) || '{}');
+    const date = data.savedAt ? new Date(data.savedAt).toLocaleDateString() : '';
     return `<div class="saved-script-item" data-key="${key}">
       <div>
         <div class="saved-script-name">${data.title || key}</div>
-        <div class="saved-script-date">${data.blocks?.length || 0} blocks</div>
+        <div class="saved-script-date">${data.blocks?.length || 0} blocks · ${date}</div>
       </div>
-      <span class="saved-script-del" data-del="${key}">×</span>
+      <span class="saved-script-del" data-del="${key}" title="Delete">×</span>
     </div>`;
   }).join('');
 
@@ -333,6 +379,18 @@ function renderOpenList() {
       loadFromStorage(item.dataset.key);
     });
   });
+}
+
+// ── Auto-save ─────────────────────────────────────────────────────────────────
+
+function scheduleAutosave() {
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(() => {
+    if (state.dirty) {
+      saveToStorage();
+      showToast('Auto-saved ✓');
+    }
+  }, AUTOSAVE_INTERVAL);
 }
 
 // ── New Script ────────────────────────────────────────────────────────────────
@@ -348,36 +406,10 @@ function newScript() {
   document.getElementById('titleInput').value      = state.title;
   document.getElementById('pageTitleInput').value  = state.title;
   document.getElementById('pageAuthorInput').value = '';
-  // Add starter blocks
   addBlock('scene', '');
   addBlock('action', '');
   render();
   setTimeout(() => focusBlock(state.blocks[0]?.id), 50);
-}
-
-// ── File Import / Export ──────────────────────────────────────────────────────
-
-function exportFile() {
-  const blob = new Blob([toJSON()], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = (state.title || 'screenplay') + '.wbs';
-  a.click();
-}
-
-function importFile(file) {
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      fromJSON(e.target.result);
-      state.dirty = false;
-      render();
-      hideOverlay('openOverlay');
-    } catch {
-      alert('Could not read file. Make sure it is a valid .wbs file.');
-    }
-  };
-  reader.readAsText(file);
 }
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
@@ -387,13 +419,13 @@ function showToast(msg) {
   if (!toast) {
     toast = document.createElement('div');
     toast.id = 'wb-toast';
-    toast.style.cssText = 'position:fixed;bottom:40px;left:50%;transform:translateX(-50%);background:var(--accent);color:var(--bg);padding:8px 20px;border-radius:20px;font-size:13px;font-weight:500;z-index:999;transition:opacity 0.3s;font-family:"DM Sans",sans-serif';
+    toast.style.cssText = 'position:fixed;bottom:40px;left:50%;transform:translateX(-50%);background:var(--accent);color:var(--bg);padding:8px 20px;border-radius:20px;font-size:13px;font-weight:500;z-index:999;transition:opacity 0.3s;font-family:"DM Sans",sans-serif;pointer-events:none;';
     document.body.appendChild(toast);
   }
   toast.textContent = msg;
   toast.style.opacity = '1';
   clearTimeout(toast._timer);
-  toast._timer = setTimeout(() => { toast.style.opacity = '0'; }, 1800);
+  toast._timer = setTimeout(() => { toast.style.opacity = '0'; }, 2000);
 }
 
 // ── Overlay Helpers ───────────────────────────────────────────────────────────
@@ -404,7 +436,6 @@ function hideOverlay(id) { document.getElementById(id).classList.remove('visible
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 function init() {
-  // Load sample script
   fromJSON(JSON.stringify({
     version: 1,
     title: 'ಮನೆಗೆ ಮರಳಿ',
@@ -426,23 +457,20 @@ function init() {
 
   render();
 
-  // Bind buttons
   document.getElementById('btnSave').onclick      = saveToStorage;
   document.getElementById('btnNew').onclick       = newScript;
-  document.getElementById('btnExport').onclick    = () => { exportFile(); };
+  document.getElementById('btnDownload').onclick  = downloadScript;
   document.getElementById('btnShortcuts').onclick = () => showOverlay('shortcutOverlay');
   document.getElementById('btnCloseShortcuts').onclick = () => hideOverlay('shortcutOverlay');
   document.getElementById('btnOpen').onclick      = () => { renderOpenList(); showOverlay('openOverlay'); };
   document.getElementById('btnCloseOpen').onclick = () => hideOverlay('openOverlay');
-  document.getElementById('btnImportFile').onclick = () => document.getElementById('fileInput').click();
-  document.getElementById('fileInput').onchange   = e => { if (e.target.files[0]) importFile(e.target.files[0]); };
+  document.getElementById('btnUploadFile').onclick = () => document.getElementById('fileInput').click();
+  document.getElementById('fileInput').onchange   = e => { if (e.target.files[0]) uploadScript(e.target.files[0]); };
 
-  // Close overlays on backdrop click
   document.querySelectorAll('.shortcut-overlay').forEach(el => {
     el.addEventListener('click', e => { if (e.target === el) el.classList.remove('visible'); });
   });
 
-  // Title sync
   document.getElementById('titleInput').addEventListener('input', e => {
     state.title = e.target.value;
     document.getElementById('pageTitleInput').value = e.target.value;
@@ -462,7 +490,6 @@ function init() {
     state.dirty = true;
   });
 
-  // Block type panel
   document.querySelectorAll('.block-type-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       if (focusedBlockId) {
@@ -473,22 +500,25 @@ function init() {
     });
   });
 
-  // Global keyboard
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       document.querySelectorAll('.shortcut-overlay.visible').forEach(el => el.classList.remove('visible'));
     }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+      e.preventDefault();
+      downloadScript();
+    }
   });
 
-  // Warn before leaving with unsaved changes
   window.addEventListener('beforeunload', e => {
     if (state.dirty) { e.preventDefault(); e.returnValue = ''; }
   });
 
-  // Export PDF = print
   document.getElementById('btnExport').addEventListener('click', () => {
     window.print();
   });
+
+  scheduleAutosave();
 }
 
 document.addEventListener('DOMContentLoaded', init);
