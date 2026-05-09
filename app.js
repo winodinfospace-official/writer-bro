@@ -356,29 +356,74 @@ function renderOpenList() {
   const idx = JSON.parse(localStorage.getItem('wb_index') || '[]');
   const container = document.getElementById('savedScriptsList');
 
+  let localHTML = '';
   if (idx.length === 0) {
-    container.innerHTML = '<div style="color:var(--text-faint);font-size:12px;padding:8px 0">No saved scripts in browser yet.</div>';
-    return;
+    localHTML = '<div style="color:var(--text-faint);font-size:12px;padding:8px 0">No saved scripts in browser yet.</div>';
+  } else {
+    localHTML = idx.map(key => {
+      const data = JSON.parse(localStorage.getItem(key) || '{}');
+      const date = data.savedAt ? new Date(data.savedAt).toLocaleDateString() : '';
+      return `<div class="saved-script-item" data-key="${key}">
+        <div>
+          <div class="saved-script-name">${data.title || key}</div>
+          <div class="saved-script-date">${data.blocks?.length || 0} blocks · ${date}</div>
+        </div>
+        <span class="saved-script-del" data-del="${key}" title="Delete">×</span>
+      </div>`;
+    }).join('');
   }
 
-  container.innerHTML = idx.map(key => {
-    const data = JSON.parse(localStorage.getItem(key) || '{}');
-    const date = data.savedAt ? new Date(data.savedAt).toLocaleDateString() : '';
-    return `<div class="saved-script-item" data-key="${key}">
-      <div>
-        <div class="saved-script-name">${data.title || key}</div>
-        <div class="saved-script-date">${data.blocks?.length || 0} blocks · ${date}</div>
-      </div>
-      <span class="saved-script-del" data-del="${key}" title="Delete">×</span>
-    </div>`;
-  }).join('');
+  container.innerHTML = localHTML +
+    '<div class="cloud-section-title">☁ Cloud Scripts</div>' +
+    '<div id="cloudScriptsList"><div style="color:var(--text-faint);font-size:12px;padding:4px 0">Loading...</div></div>';
 
-  container.querySelectorAll('.saved-script-item').forEach(item => {
+  container.querySelectorAll('.saved-script-item[data-key]').forEach(item => {
     item.addEventListener('click', e => {
       if (e.target.dataset.del) { deleteFromStorage(e.target.dataset.del); return; }
       loadFromStorage(item.dataset.key);
     });
   });
+
+  if (window._loadCloudScripts) {
+    window._loadCloudScripts().then(scripts => {
+      const cl = document.getElementById('cloudScriptsList');
+      if (!cl) return;
+      if (!scripts.length) {
+        cl.innerHTML = '<div style="color:var(--text-faint);font-size:12px;padding:4px 0">No cloud scripts yet.</div>';
+        return;
+      }
+      cl.innerHTML = scripts.map(s => {
+        const safeJson = JSON.stringify({title:s.title,author:s.author,blocks:s.blocks,savedAt:s.savedAt}).replace(/"/g,'&quot;');
+        return `<div class="saved-script-item" data-cloud-id="${s.id}" data-cloud-json="${safeJson}">
+          <div>
+            <div class="saved-script-name"><span class="cloud-icon">☁</span>${s.title || s.id}</div>
+            <div class="saved-script-date">${s.blocks ? s.blocks.length : 0} blocks · ${s.savedAt ? new Date(s.savedAt).toLocaleDateString() : ''}</div>
+          </div>
+          <span class="saved-script-del" data-cloud-del="${s.id}" title="Delete from cloud">×</span>
+        </div>`;
+      }).join('');
+
+      cl.querySelectorAll('.saved-script-item').forEach(item => {
+        item.addEventListener('click', async e => {
+          if (e.target.dataset.cloudDel) {
+            if (!confirm('Delete from cloud?')) return;
+            await window._deleteCloudScript(e.target.dataset.cloudDel);
+            renderOpenList();
+            return;
+          }
+          try {
+            const raw = item.dataset.cloudJson.replace(/&quot;/g, '"');
+            const data = JSON.parse(raw);
+            fromJSON(JSON.stringify({ version:1, ...data }));
+            state.dirty = false;
+            render();
+            hideOverlay('openOverlay');
+            showToast('☁ Loaded from cloud ✓');
+          } catch(err) { alert('Failed to load cloud script: ' + err.message); }
+        });
+      });
+    });
+  }
 }
 
 // ── Auto-save ─────────────────────────────────────────────────────────────────
@@ -522,3 +567,7 @@ function init() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
+
+// Expose state and helpers globally for Firebase integration
+window._state     = state;
+window._showToast = showToast;
