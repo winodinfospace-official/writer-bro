@@ -11,43 +11,67 @@
     /* ── AUTH OVERLAY ── */
     #authOverlay {
       position: fixed; inset: 0;
-      background: var(--bg);
+      background: url('bg.png') center center / cover no-repeat;
       z-index: 9999;
       display: flex;
-      justify-content: center;
+      justify-content: flex-start;
       align-items: center;
+      padding-left: 8%;
+    }
+    #authOverlay::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(
+        to right,
+        rgba(0,0,0,0.82) 0%,
+        rgba(0,0,0,0.55) 50%,
+        rgba(0,0,0,0.1) 100%
+      );
+    }
+    .auth-content {
+      position: relative;
+      z-index: 1;
+      display: flex;
       flex-direction: column;
-      gap: 16px;
+      align-items: flex-start;
+      gap: 12px;
     }
     #authOverlay .auth-logo {
       font-family: 'Playfair Display', serif;
-      font-size: 32px;
-      color: var(--accent);
-      margin-bottom: 8px;
+      font-size: 52px;
+      color: #e8a048;
+      margin-bottom: 4px;
+      text-shadow: 0 2px 24px rgba(0,0,0,0.6);
+      letter-spacing: 0.01em;
     }
     #authOverlay .auth-sub {
-      font-size: 13px;
-      color: var(--text-dim);
-      margin-bottom: 24px;
+      font-family: 'Noto Sans Kannada', sans-serif;
+      font-size: 16px;
+      color: rgba(255,255,255,0.75);
+      margin-bottom: 28px;
+      letter-spacing: 0.02em;
     }
     #btnGoogleLogin {
       display: flex;
       align-items: center;
       gap: 12px;
       background: #fff;
-      color: #333;
+      color: #222;
       border: none;
       border-radius: 6px;
-      padding: 12px 24px;
-      font-size: 14px;
-      font-weight: 500;
+      padding: 14px 28px;
+      font-size: 15px;
+      font-weight: 600;
       cursor: pointer;
       font-family: 'DM Sans', sans-serif;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.3);
-      transition: box-shadow 0.15s;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+      transition: transform 0.15s, box-shadow 0.15s;
     }
-    #btnGoogleLogin:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
-    #btnGoogleLogin svg { width: 20px; height: 20px; flex-shrink: 0; }
+    #btnGoogleLogin:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+    }
+    #btnGoogleLogin svg { width: 22px; height: 22px; flex-shrink: 0; }
 
     /* ── USER AREA IN TOPBAR ── */
     .user-area {
@@ -101,6 +125,7 @@
 
 <!-- AUTH OVERLAY -->
 <div id="authOverlay">
+  <div class="auth-content">
   <div class="auth-logo">Writer Bro</div>
   <div class="auth-sub">ಕನ್ನಡ ಚಿತ್ರಕಥೆ ಬರವಣಿಗೆ</div>
   <button id="btnGoogleLogin">
@@ -112,6 +137,7 @@
     </svg>
     Sign in with Google
   </button>
+  </div>
 </div>
 
 <!-- TOP BAR -->
