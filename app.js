@@ -280,7 +280,24 @@ function fromJSON(json) {
   state.title  = data.title  || 'ಅಶೀರ್ಷಿಕೆ';
   state.author = data.author || '';
   state.blocks = data.blocks || [];
-  state.idSeq  = state.blocks.length + 1;
+
+  // Repair any duplicate block IDs left over from the old idSeq bug.
+  // Without this, an already-corrupted saved script stays corrupted forever.
+  const seen = new Set();
+  let maxNum = 0;
+  state.blocks.forEach(b => {
+    const n = parseInt(String(b.id).replace('b', ''), 10);
+    if (!isNaN(n)) maxNum = Math.max(maxNum, n);
+  });
+  state.blocks.forEach(b => {
+    if (seen.has(b.id)) {
+      maxNum += 1;
+      b.id = 'b' + maxNum;
+    }
+    seen.add(b.id);
+  });
+
+  state.idSeq = maxNum;
   state.dirty  = false;
   document.getElementById('titleInput').value      = state.title;
   document.getElementById('pageTitleInput').value  = state.title;
