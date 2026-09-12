@@ -558,8 +558,11 @@ body { letter-spacing: .005em; }
 .editor-area {
   background: #242426;
   padding: 34px 30px 46px;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: flex-start;
+  flex-direction: column;
   overflow-y: auto;
+  overflow-x: hidden;
   scroll-behavior: smooth;
 }
 .script-page {
@@ -570,7 +573,14 @@ body { letter-spacing: .005em; }
   padding: 78px 82px;
   border-radius: 1px;
   box-shadow: 0 12px 45px rgba(0,0,0,.32), 0 2px 8px rgba(0,0,0,.16);
-  flex: 0 0 794px;
+  flex: 0 0 1123px;
+}
+
+/* Every sheet stays on its own row, like a stack of Word pages. */
+.script-page-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
 }
 .generated-page {
   margin-top: 26px;

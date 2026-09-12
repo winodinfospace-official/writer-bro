@@ -106,20 +106,21 @@ function renderBlocks() {
   const firstPage = document.getElementById('scriptPage');
   const container = document.getElementById('scriptBlocks');
 
-  // Collect existing blocks from all generated pages so re-pagination never
-  // destroys the user's textareas or their event handlers.
+  // Preserve existing block DOM nodes (and their focus/caret/event handlers)
+  // while rebuilding the page layout.
   const existing = new Map(
     [...editor.querySelectorAll('.script-block')].map(el => [el.dataset.blockId, el])
   );
 
-  // Remove generated pages; page 1 is retained.
+  // Remove generated pages; page 1 remains the anchor page.
   editor.querySelectorAll('.script-page:not(#scriptPage)').forEach(page => page.remove());
   container.innerHTML = '';
 
   state.blocks.forEach(block => {
     let el = existing.get(block.id);
-    if (!el) el = createBlockEl(block);
-    else {
+    if (!el) {
+      el = createBlockEl(block);
+    } else {
       el.dataset.type = block.type;
       el.className = `script-block block-${block.type}`;
       const badge = el.querySelector('.block-badge');
@@ -127,13 +128,65 @@ function renderBlocks() {
       if (badge) badge.textContent = BLOCK_LABELS[block.type];
       if (ta) {
         ta.placeholder = PLACEHOLDERS[block.type];
-        ta.value = block.text;
+        if (ta.value !== block.text) ta.value = block.text;
+        autoResize(ta);
       }
     }
     container.appendChild(el);
   });
 
-  paginatePages();
+  // Wait one frame so textarea heights/fonts/layout have settled before measuring.
+  requestAnimationFrame(() => {
+    paginatePages();
+    renderStats();
+  });
+}
+
+function createBlockEl(block) {
+  const el = document.createElement('div');
+  el.className = `script-block block-${block.type}`;
+  el.dataset.blockId = block.id;
+  el.dataset.type = block.type;
+
+  const badge = document.createElement('div');
+  badge.className = 'block-badge';
+  badge.textContent = BLOCK_LABELS[block.type];
+
+  const ta = document.createElement('textarea');
+  ta.className = 'block-content';
+  ta.value = block.text || '';
+  ta.placeholder = PLACEHOLDERS[block.type];
+  ta.rows = 1;
+  ta.setAttribute('lang', 'kn');
+  ta.setAttribute('spellcheck', 'false');
+
+  ta.addEventListener('input', () => {
+    autoResize(ta);
+    updateBlock(block.id, { text: ta.value });
+    renderSceneList();
+    renderTitle();
+    scheduleAutosave();
+
+    // CRITICAL: paginate while the user is typing, not only after Enter.
+    // The textarea stays in the DOM, so focus/caret are preserved when its
+    // containing block moves to the next page.
+    requestAnimationFrame(() => {
+      paginatePages();
+      renderStats();
+    });
+  });
+
+  ta.addEventListener('focus', () => {
+    focusedBlockId = block.id;
+    updatePanelActive(block.type);
+  });
+
+  ta.addEventListener('keydown', e => handleKey(e, block.id, ta));
+
+  el.appendChild(badge);
+  el.appendChild(ta);
+  requestAnimationFrame(() => autoResize(ta));
+  return el;
 }
 
 function createPage() {
@@ -145,34 +198,59 @@ function createPage() {
   return page;
 }
 
+function pageBody(page) {
+  return page.id === 'scriptPage'
+    ? document.getElementById('scriptBlocks')
+    : page.querySelector('.script-page-body');
+}
+
+function pageIsFull(body) {
+  // scrollHeight includes the complete content height even though overflow is
+  // hidden, making this reliable for a fixed A4 writing area.
+  return body.scrollHeight > body.clientHeight + 1;
+}
+
 function paginatePages() {
   const editor = document.querySelector('.editor-area');
   const firstPage = document.getElementById('scriptPage');
   if (!editor || !firstPage) return;
 
-  const pages = [firstPage];
-  let page = firstPage;
-  let body = document.getElementById('scriptBlocks');
-
+  // Gather every block in logical order.
   const blocks = [...editor.querySelectorAll('.script-block')];
-  // Put everything back into page 1 before calculating page breaks.
-  blocks.forEach(el => body.appendChild(el));
 
-  blocks.forEach(el => {
-    // A block belongs to the current page unless adding it makes that page
-    // overflow. Page breaks happen between screenplay blocks, like a word
-    // processor preserving the integrity of each block.
-    if (body.scrollHeight > body.clientHeight + 1 && body.children.length > 1) {
-      body.removeChild(el);
-      page = createPage();
-      editor.appendChild(page);
-      pages.push(page);
-      body = page.querySelector('.script-page-body');
-      body.appendChild(el);
+  // Start fresh with one page, then distribute blocks sequentially.
+  editor.querySelectorAll('.script-page:not(#scriptPage)').forEach(page => page.remove());
+  const firstBody = document.getElementById('scriptBlocks');
+  blocks.forEach(el => firstBody.appendChild(el));
+
+  const pages = [firstPage];
+  let currentPage = firstPage;
+  let currentBody = firstBody;
+
+  for (const el of blocks) {
+    // If this block makes the current page overflow and there is already
+    // content on that page, move the whole screenplay block to a new page.
+    if (pageIsFull(currentBody) && currentBody.children.length > 1) {
+      currentBody.removeChild(el);
+      currentPage = createPage();
+      editor.appendChild(currentPage);
+      pages.push(currentPage);
+      currentBody = pageBody(currentPage);
+      currentBody.appendChild(el);
     }
-  });
+  }
 
-  document.getElementById('statPages').textContent = `${pages.length} ${pages.length === 1 ? 'page' : 'pages'}`;
+  // When the last page reaches its writing limit, immediately show the next
+  // empty white sheet. This is the key Word-like behaviour the editor needs:
+  // the user should see a fresh page before pressing Enter.
+  if (currentBody.children.length > 0 && pageIsFull(currentBody)) {
+    const nextPage = createPage();
+    editor.appendChild(nextPage);
+    pages.push(nextPage);
+  }
+
+  document.getElementById('statPages').textContent =
+    `${pages.length} ${pages.length === 1 ? 'page' : 'pages'}`;
 }
 
 function renderSceneList() {
