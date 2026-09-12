@@ -213,37 +213,50 @@ function pageIsFull(body) {
 function paginatePages() {
   const editor = document.querySelector('.editor-area');
   const firstPage = document.getElementById('scriptPage');
-  if (!editor || !firstPage) return;
+  const firstBody = document.getElementById('scriptBlocks');
+  if (!editor || !firstPage || !firstBody) return;
 
-  // Gather every block in logical order.
+  // Collect blocks in their current logical order BEFORE rebuilding pages.
   const blocks = [...editor.querySelectorAll('.script-block')];
 
-  // Start fresh with one page, then distribute blocks sequentially.
-  editor.querySelectorAll('.script-page:not(#scriptPage)').forEach(page => page.remove());
-  const firstBody = document.getElementById('scriptBlocks');
-  blocks.forEach(el => firstBody.appendChild(el));
+  // Remove old generated pages, then empty page 1's body.
+  editor.querySelectorAll('.script-page.generated-page').forEach(page => page.remove());
+  firstBody.innerHTML = '';
 
   const pages = [firstPage];
   let currentPage = firstPage;
   let currentBody = firstBody;
 
+  // Place each block one-by-one. If adding a block would overflow the
+  // current A4 writing area, move that block to a brand-new white page.
   for (const el of blocks) {
-    // If this block makes the current page overflow and there is already
-    // content on that page, move the whole screenplay block to a new page.
-    if (pageIsFull(currentBody) && currentBody.children.length > 1) {
-      currentBody.removeChild(el);
-      currentPage = createPage();
-      editor.appendChild(currentPage);
-      pages.push(currentPage);
-      currentBody = pageBody(currentPage);
-      currentBody.appendChild(el);
+    currentBody.appendChild(el);
+
+    if (pageIsFull(currentBody)) {
+      // If this is the first/only block on an empty page, keep it there.
+      // A single very tall block is allowed to occupy the page rather than
+      // creating an endless chain of empty pages.
+      const children = [...currentBody.children];
+      if (children.length > 1) {
+        currentBody.removeChild(el);
+        currentPage = createPage();
+        editor.appendChild(currentPage);
+        pages.push(currentPage);
+        currentBody = pageBody(currentPage);
+        currentBody.appendChild(el);
+      }
     }
   }
 
-  // When the last page reaches its writing limit, immediately show the next
-  // empty white sheet. This is the key Word-like behaviour the editor needs:
-  // the user should see a fresh page before pressing Enter.
-  if (currentBody.children.length > 0 && pageIsFull(currentBody)) {
+  // Always keep one clean, white page ready after the page containing the
+  // cursor/content. This gives the editor the Word-like visual behaviour:
+  // Page 1 → Page 2 → Page 3, vertically stacked, with no text floating on
+  // the dark workspace outside a paper sheet.
+  if (blocks.length > 0 && pages.length === 1 && pageIsFull(firstBody)) {
+    const nextPage = createPage();
+    editor.appendChild(nextPage);
+    pages.push(nextPage);
+  } else if (currentBody.children.length > 0 && pageIsFull(currentBody)) {
     const nextPage = createPage();
     editor.appendChild(nextPage);
     pages.push(nextPage);

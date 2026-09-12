@@ -649,3 +649,80 @@ input:focus, textarea:focus { outline: none; }
   .script-page { width: 210mm; min-height: 297mm; height: 297mm; padding: 20mm; margin: 0; flex: none; }
   .generated-page { margin-top: 0; }
 }
+
+/* ── PAGINATED WRITING FIX ── */
+.editor-area {
+  align-items: center;
+  justify-content: flex-start;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.script-page {
+  flex: 0 0 1123px;
+  width: 794px;
+  height: 1123px;
+  min-height: 1123px;
+  max-width: 794px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#scriptBlocks,
+.script-page-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  width: 100%;
+}
+
+.script-page.generated-page {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 1123px;
+  width: 794px;
+  height: 1123px;
+  min-height: 1123px;
+  max-width: 794px;
+  margin-top: 26px;
+  padding: 78px 82px;
+  background: var(--paper);
+  box-sizing: border-box;
+}
+
+/* Keep every generated page visibly white even when empty. */
+.script-page.generated-page .script-page-body {
+  display: block;
+  width: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 1100px) {
+  .script-page,
+  .script-page.generated-page {
+    width: min(794px, calc(100vw - 60px));
+    max-width: min(794px, calc(100vw - 60px));
+  }
+}
+
+@media (max-width: 820px) {
+  .script-page,
+  .script-page.generated-page {
+    width: calc(100vw - 20px);
+    max-width: calc(100vw - 20px);
+    min-height: 1000px;
+    height: 1000px;
+    flex-basis: 1000px;
+    padding: 52px 34px;
+  }
+}
+
+@media (max-width: 520px) {
+  .script-page,
+  .script-page.generated-page {
+    padding: 42px 24px;
+  }
+}
