@@ -1,36 +1,50 @@
-const TYPES=['scene','action','character','dialogue','parenthetical','transition'];
-const LABELS={scene:'Scene Heading',action:'Action',character:'Character',dialogue:'Dialogue',parenthetical:'Parenthetical',transition:'Transition'};
+const KEY='writerbro-kannada-v2';
+const PAGE_H=981; // content height in CSS px after padding
+const state={title:'',blocks:[],active:null};
 const pagesEl=document.getElementById('pages'), sceneList=document.getElementById('sceneList');
-const nameEl=document.getElementById('scriptName'), sceneStat=document.getElementById('sceneStat'), wordStat=document.getElementById('wordStat'), pageStat=document.getElementById('pageStat'), saveStatus=document.getElementById('saveStatus');
-let state={title:'ಹೊಸ ಚಿತ್ರಕಥೆ',author:'',blocks:[{type:'scene',text:''}]}; let activeBlock=null; let saveTimer;
-function newPage(){const p=document.createElement('section');p.className='page';p.innerHTML='<div class="page-inner"></div><div class="page-number"></div>';pagesEl.appendChild(p);return p}
-function newBlock(type='action',text=''){const b=document.createElement('div');b.className='block';b.dataset.type=type;b.contentEditable='true';b.spellcheck=false;b.textContent=text||'';b.dataset.placeholder=text?'':' ';b.addEventListener('focus',()=>{activeBlock=b;setActiveType(type)});b.addEventListener('input',()=>{ensurePagination();scheduleSave();});b.addEventListener('keydown',blockKey);return b}
-function render(){pagesEl.innerHTML='';const p=newPage();let inner=p.querySelector('.page-inner');state.blocks.forEach((x,i)=>{let b=newBlock(x.type,x.text);inner.appendChild(b);if(i===0){activeBlock=b}});ensurePagination();updateStats();if(activeBlock){activeBlock.focus();setActiveType(activeBlock.dataset.type)}}
-function contentHeight(inner){return inner.clientHeight}
-function overflows(b){const inner=b.parentElement;return b.offsetTop+b.offsetHeight>inner.clientHeight-2}
-function splitBlock(b){const txt=b.textContent||'';if(txt.length<40)return false;let lo=1,hi=txt.length,best=1;const inner=b.parentElement;const original=txt;while(lo<=hi){let mid=(lo+hi)>>1;b.textContent=original.slice(0,mid);if(!overflows(b)){best=mid;lo=mid+1}else hi=mid-1}let cut=best;while(cut>1 && !/\s/.test(original[cut-1]))cut--;if(cut<20)cut=best;b.textContent=original.slice(0,cut).trimEnd();const rest=original.slice(cut).trimStart();const next=b.nextElementSibling;if(next&&next.dataset.type===b.dataset.type&&next.classList.contains('block'))next.textContent=rest+' '+next.textContent;else{const nb=newBlock(b.dataset.type,rest);b.parentElement.appendChild(nb)}return true}
-function moveOverflowForward(){let changed=false;const pages=[...pagesEl.querySelectorAll('.page')];for(let i=0;i<pages.length;i++){const inner=pages[i].querySelector('.page-inner');let blocks=[...inner.querySelectorAll('.block')];for(const b of blocks){if(!overflows(b))continue;if(splitBlock(b)){changed=true;continue}let next=pages[i+1]||newPage();next.querySelector('.page-inner').prepend(b);changed=true;}}return changed}
-function ensurePagination(){let guard=0;while(guard++<30){if(!moveOverflowForward())break}cleanupEmptyPages();numberPages();syncStateFromDom();updateStats()}
-function cleanupEmptyPages(){const pages=[...pagesEl.querySelectorAll('.page')];pages.slice(1).forEach(p=>{if(!p.querySelector('.block'))p.remove()})}
-function numberPages(){[...pagesEl.querySelectorAll('.page')].forEach((p,i)=>p.querySelector('.page-number').textContent=i+1)}
-function syncStateFromDom(){const blocks=[...pagesEl.querySelectorAll('.block')].map(b=>({type:b.dataset.type,text:b.textContent}));state.blocks=blocks.length?blocks:[{type:'scene',text:''}]}
-function updateStats(){const blocks=[...pagesEl.querySelectorAll('.block')];const scenes=blocks.filter(b=>b.dataset.type==='scene').length;const words=blocks.reduce((n,b)=>n+(b.textContent.trim()?b.textContent.trim().split(/\s+/).length:0),0);sceneStat.textContent=`${scenes} scene${scenes===1?'':'s'}`;wordStat.textContent=`${words} word${words===1?'':'s'}`;const n=pagesEl.querySelectorAll('.page').length;pageStat.textContent=`${n} page${n===1?'':'s'}`}
-function setActiveType(type){document.querySelectorAll('.format').forEach(x=>x.classList.toggle('active',x.dataset.type===type))}
-function setType(type){if(!activeBlock)return;activeBlock.dataset.type=type;activeBlock.focus();setActiveType(type);scheduleSave()}
-function nextType(dir=1){if(!activeBlock)return;let i=TYPES.indexOf(activeBlock.dataset.type);setType(TYPES[(i+dir+TYPES.length)%TYPES.length])}
-function blockKey(e){if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();saveLocal();return}if(e.key==='Tab'){e.preventDefault();nextType(e.shiftKey?-1:1);return}if(e.key==='Enter'){e.preventDefault();const nb=newBlock('action','');activeBlock.insertAdjacentElement('afterend',nb);nb.focus();activeBlock=nb;setActiveType('action');setTimeout(ensurePagination,0);return}if(e.key==='Backspace'&&activeBlock.textContent===''&&activeBlock.previousElementSibling){e.preventDefault();const prev=activeBlock.previousElementSibling;activeBlock.remove();prev.focus();activeBlock=prev;ensurePagination()}}
-function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(saveLocal,400)}
-function saveLocal(){syncStateFromDom();state.title=nameEl.value||'ಹೊಸ ಚಿತ್ರಕಥೆ';localStorage.setItem('writerBroKannada',JSON.stringify(state));saveStatus.textContent='Saved locally • '+new Date().toLocaleTimeString('kn-IN',{hour:'2-digit',minute:'2-digit'});}
-function loadLocal(){try{const x=JSON.parse(localStorage.getItem('writerBroKannada'));if(x&&Array.isArray(x.blocks)){state=x;nameEl.value=x.title||'ಹೊಸ ಚಿತ್ರಕಥೆ'}}catch(e){}}
-function download(){syncStateFromDom();state.title=nameEl.value;const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(state.title||'writer-bro-script').replace(/[^\w\u0C80-\u0CFF -]/g,'')+'.wbs';a.click();URL.revokeObjectURL(a.href)}
-function openFile(file){const r=new FileReader();r.onload=()=>{try{const x=JSON.parse(r.result);if(x.blocks){state=x;nameEl.value=x.title||'ಹೊಸ ಚಿತ್ರಕಥೆ';render();saveLocal()}}catch(e){alert('Invalid .wbs file')}};r.readAsText(file)}
-document.querySelectorAll('.format').forEach(b=>b.addEventListener('click',()=>setType(b.dataset.type)));
-document.getElementById('newBtn').onclick=()=>{if(confirm('ಹೊಸ ಚಿತ್ರಕಥೆ ಪ್ರಾರಂಭಿಸಬೇಕೆ?')){state={title:'ಹೊಸ ಚಿತ್ರಕಥೆ',author:'',blocks:[{type:'scene',text:''}]};nameEl.value=state.title;localStorage.removeItem('writerBroKannada');render()}};
-document.getElementById('saveBtn').onclick=saveLocal;document.getElementById('downloadBtn').onclick=download;document.getElementById('printBtn').onclick=()=>window.print();
-document.getElementById('shortcutsBtn').onclick=()=>document.getElementById('shortcuts').classList.remove('hidden');document.getElementById('closeShortcuts').onclick=()=>document.getElementById('shortcuts').classList.add('hidden');document.getElementById('shortcuts').onclick=e=>{if(e.target.id==='shortcuts')e.target.classList.add('hidden')};
-document.getElementById('focusBtn').onclick=()=>document.body.classList.toggle('focus-mode');nameEl.addEventListener('input',()=>{state.title=nameEl.value;scheduleSave()});
-document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&['1','2','3','4','5','6'].includes(e.key)){e.preventDefault();setType(TYPES[+e.key-1])}});
-// Scene navigator
-function renderScenes(){sceneList.innerHTML='';[...pagesEl.querySelectorAll('.block[data-type=scene]')].forEach((b,i)=>{const d=document.createElement('div');d.className='scene';d.innerHTML=`<span class="scene-num">${i+1}</span>${b.textContent.trim()||'ಹೊಸ ದೃಶ್ಯ'}`;d.onclick=()=>{b.scrollIntoView({behavior:'smooth',block:'center'});b.focus()};sceneList.appendChild(d)})}
-const oldUpdate=updateStats;updateStats=function(){oldUpdate();renderScenes()};
-loadLocal();render();
+const TYPES=['scene','action','character','dialogue','parenthetical','transition'];
+const LABEL={scene:'Scene Heading',action:'Action',character:'Character',dialogue:'Dialogue',parenthetical:'Parenthetical',transition:'Transition'};
+let selectedType='scene';
+function uid(){return Math.random().toString(36).slice(2)+Date.now().toString(36)}
+function defaultBlock(type='scene',text=''){return {id:uid(),type,text}}
+function newScript(){state.title='';state.blocks=[defaultBlock('scene','')];state.active=state.blocks[0].id;render();save(false);focusActive()}
+function load(){try{const raw=localStorage.getItem(KEY);if(raw){Object.assign(state,JSON.parse(raw)); if(!state.blocks?.length) newScript(); else render(); return}}catch(e){} newScript()}
+function save(show=true){localStorage.setItem(KEY,JSON.stringify(state));document.getElementById('saveState').textContent=show?'Saved locally':'Local autosave on';setTimeout(()=>document.getElementById('saveState').textContent='Local autosave on',1400)}
+function sanitize(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function blockHTML(b){return `<div class="block ${b.type}" contenteditable="true" data-id="${b.id}" data-type="${b.type}">${sanitize(b.text)}</div>`}
+function render(){
+ pagesEl.innerHTML=''; let page=makePage(1); pagesEl.appendChild(page); let container=page.querySelector('.blocks');
+ state.blocks.forEach((b,i)=>{const temp=document.createElement('div');temp.innerHTML=blockHTML(b);const el=temp.firstElementChild;container.appendChild(el);
+   if(container.scrollHeight>PAGE_H && container.children.length>1){container.removeChild(el);page=makePage(document.querySelectorAll('.page').length+1);pagesEl.appendChild(page);container=page.querySelector('.blocks');container.appendChild(el);}
+ });
+ bindBlocks();renderScenes();stats();
+}
+function makePage(n){const d=document.createElement('section');d.className='page';d.innerHTML=`<div class="blocks"></div><div class="page-number">${n}</div>`;return d}
+function bindBlocks(){document.querySelectorAll('.block').forEach(el=>{el.addEventListener('focus',()=>{state.active=el.dataset.id;selectedType=el.dataset.type;updateFormat()});el.addEventListener('input',()=>{const b=state.blocks.find(x=>x.id===el.dataset.id);if(!b)return;b.text=el.innerText;paginateFrom(el);save(false);stats();});el.addEventListener('keydown',onKey)});}
+function paginateFrom(el){
+ const page=el.closest('.page'), container=page.querySelector('.blocks');
+ if(container.scrollHeight<=PAGE_H)return;
+ const b=state.blocks.find(x=>x.id===el.dataset.id); if(!b)return;
+ // split oversized text; otherwise move the overflowing block to a new page through render
+ if(el.offsetHeight>PAGE_H){splitOversized(b);return}
+ render();focusActive();
+}
+function splitOversized(b){
+ const words=b.text.split(/(\s+)/);let fit='',rest='';const test=document.createElement('div');test.className='block '+b.type;test.style.cssText='position:absolute;visibility:hidden;width:100%;font-size:14px;line-height:1.58;white-space:pre-wrap;word-break:break-word';document.body.appendChild(test);
+ for(let i=0;i<words.length;i++){test.textContent=fit+words[i];if(test.offsetHeight>PAGE_H-8){rest=words.slice(i).join('');break}fit+=words[i]}
+ test.remove(); if(!rest)return; b.text=fit.trimEnd();const idx=state.blocks.findIndex(x=>x.id===b.id);state.blocks.splice(idx+1,0,defaultBlock(b.type,rest.trimStart()));state.active=state.blocks[idx+1].id;render();focusActive()
+}
+function onKey(e){const id=this.dataset.id, idx=state.blocks.findIndex(b=>b.id===id);if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();const nextType=this.dataset.type==='character'?'dialogue':this.dataset.type==='dialogue'?'action':this.dataset.type;const nb=defaultBlock(nextType,'');state.blocks.splice(idx+1,0,nb);state.active=nb.id;render();focusActive()}else if(e.key==='Tab'){e.preventDefault();const t=TYPES[(TYPES.indexOf(this.dataset.type)+1)%TYPES.length];state.blocks[idx].type=t;selectedType=t;render();focusActive()}else if(e.key==='Backspace'&&this.innerText.trim()===''&&state.blocks.length>1){e.preventDefault();state.blocks.splice(idx,1);state.active=state.blocks[Math.max(0,idx-1)].id;render();focusActive()}}
+function focusActive(){const el=document.querySelector(`[data-id="${CSS.escape(state.active||'')}"]`);if(el){el.focus();const r=document.createRange();r.selectNodeContents(el);r.collapse(false);const s=getSelection();s.removeAllRanges();s.addRange(r)}}
+function updateFormat(){document.querySelectorAll('.fmt').forEach(x=>x.classList.toggle('active',x.dataset.type===selectedType))}
+function renderScenes(){sceneList.innerHTML='';let n=0;state.blocks.forEach(b=>{if(b.type==='scene'){n++;const d=document.createElement('div');d.className='scene '+(b.id===state.active?'selected':'');d.innerHTML=`<span class="scene-num">${n}</span><span>${sanitize((b.text||'(untitled scene)').slice(0,28))}</span>`;d.onclick=()=>{state.active=b.id;document.querySelector(`[data-id="${CSS.escape(b.id)}"]`)?.scrollIntoView({behavior:'smooth',block:'center'});focusActive()};sceneList.appendChild(d)}});if(!n)sceneList.innerHTML='<div class="scene"><span class="scene-num">—</span><span>No scenes yet</span></div>'}
+function stats(){const words=state.blocks.reduce((n,b)=>n+(b.text.trim()?b.text.trim().split(/\s+/).length:0),0);document.getElementById('stats').textContent=`${document.querySelectorAll('.page').length} page${document.querySelectorAll('.page').length!==1?'s':''} · ${words} words`}
+function addScene(){const b=defaultBlock('scene','');state.blocks.push(b);state.active=b.id;render();focusActive();save(false)}
+function exportWBS(){const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});download(blob,(state.title||'writer-bro')+'.wbs')}
+function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)}
+function exportWord(){let html='<html><head><meta charset="utf-8"><style>body{font-family:Arial,"Nirmala UI";font-size:12pt} .scene{font-weight:bold;border-bottom:1px solid #aaa}.character{text-align:center;font-weight:bold}.dialogue{width:55%;margin:auto}.parenthetical{width:45%;margin:auto;font-style:italic}.transition{text-align:right;font-weight:bold}</style></head><body>';state.blocks.forEach(b=>html+=`<div class="${b.type}">${sanitize(b.text).replace(/\n/g,'<br>')||'&nbsp;'}</div><br>`);html+='</body></html>';download(new Blob([html],{type:'application/msword'}),(state.title||'writer-bro')+'.doc')}
+function openFile(file){const r=new FileReader();r.onload=()=>{try{Object.assign(state,JSON.parse(r.result));if(!state.blocks?.length)throw 1;render();save(false)}catch(e){alert('Invalid .wbs file')}};r.readAsText(file)}
+document.getElementById('wbsBtn').onclick=exportWBS;document.getElementById('newBtn').onclick=()=>{if(confirm('Start a new screenplay? Unsaved local content will be replaced.'))newScript()};document.getElementById('saveBtn').onclick=()=>save(true);document.getElementById('wordBtn').onclick=exportWord;document.getElementById('pdfBtn').onclick=()=>window.print();document.getElementById('openBtn').onclick=()=>document.getElementById('fileInput').click();document.getElementById('fileInput').onchange=e=>e.target.files[0]&&openFile(e.target.files[0]);document.getElementById('addScene').onclick=addScene;document.getElementById('title').oninput=e=>{state.title=e.target.value;save(false)};
+document.querySelectorAll('.fmt').forEach(btn=>btn.onclick=()=>{selectedType=btn.dataset.type;const b=state.blocks.find(x=>x.id===state.active);if(b)b.type=selectedType;updateFormat();render();focusActive()});
+document.addEventListener('keydown',e=>{if(!(e.ctrlKey||e.metaKey))return;const m={'1':'scene','2':'action','3':'character','4':'dialogue','5':'parenthetical','6':'transition'};if(m[e.key]){e.preventDefault();selectedType=m[e.key];const b=state.blocks.find(x=>x.id===state.active);if(b){b.type=selectedType;render();focusActive()}}if(e.key.toLowerCase()==='s'){e.preventDefault();save(true)}});
+window.addEventListener('beforeunload',()=>save(false));load();
