@@ -11,7 +11,7 @@ function newScript(){state.title='';state.blocks=[defaultBlock('scene','')];stat
 function load(){try{const raw=localStorage.getItem(KEY);if(raw){Object.assign(state,JSON.parse(raw)); if(!state.blocks?.length) newScript(); else render(); return}}catch(e){} newScript()}
 function save(show=true){localStorage.setItem(KEY,JSON.stringify(state));document.getElementById('saveState').textContent=show?'Saved locally':'Local autosave on';setTimeout(()=>document.getElementById('saveState').textContent='Local autosave on',1400)}
 function sanitize(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
-function blockHTML(b){return `<div class="block ${b.type}" contenteditable="true" data-id="${b.id}" data-type="${b.type}">${sanitize(b.text)}</div>`}
+function blockHTML(b){return `<div class="block ${b.type}" contenteditable="true" spellcheck="false" data-id="${b.id}" data-type="${b.type}">${sanitize(b.text)}</div>`}
 function render(){
  pagesEl.innerHTML=''; let page=makePage(1); pagesEl.appendChild(page); let container=page.querySelector('.blocks');
  state.blocks.forEach((b,i)=>{const temp=document.createElement('div');temp.innerHTML=blockHTML(b);const el=temp.firstElementChild;container.appendChild(el);
@@ -20,7 +20,7 @@ function render(){
  bindBlocks();renderScenes();stats();
 }
 function makePage(n){const d=document.createElement('section');d.className='page';d.innerHTML=`<div class="blocks"></div><div class="page-number">${n}</div>`;return d}
-function bindBlocks(){document.querySelectorAll('.block').forEach(el=>{el.addEventListener('focus',()=>{state.active=el.dataset.id;selectedType=el.dataset.type;updateFormat()});el.addEventListener('input',()=>{const b=state.blocks.find(x=>x.id===el.dataset.id);if(!b)return;b.text=el.innerText;paginateFrom(el);save(false);stats();});el.addEventListener('keydown',onKey)});}
+function bindBlocks(){document.querySelectorAll('.block').forEach(el=>{el.addEventListener('focus',()=>{state.active=el.dataset.id;selectedType=el.dataset.type;updateFormat()});el.addEventListener('input',()=>{const b=state.blocks.find(x=>x.id===el.dataset.id);if(!b)return;b.text=el.innerText.replace(/\u00a0/g,' ');paginateFrom(el);save(false);stats();});el.addEventListener('keydown',onKey)});}
 function paginateFrom(el){
  const page=el.closest('.page'), container=page.querySelector('.blocks');
  if(container.scrollHeight<=PAGE_H)return;
