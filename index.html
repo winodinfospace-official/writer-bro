@@ -1,84 +1,71 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="kn">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Writer Bro — Kannada Screenplay Writer</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Writer Bro — Kannada Screenplay Studio</title>
+<meta name="theme-color" content="#171717">
+<meta name="description" content="Kannada screenplay writing interface by Writer Bro.">
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#111214">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+Kannada:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Kannada:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header class="topbar">
-  <div class="brand">Writer Bro <span>ಕನ್ನಡ ಚಿತ್ರಕಥೆ</span></div>
-  <div class="doc-title-wrap"><input id="titleInput" class="doc-title" placeholder="ಶೀರ್ಷಿಕೆ" value="ಅಶೀರ್ಷಿಕೆ"></div>
+  <div class="brand">Writer Bro</div>
+  <div class="divider"></div>
+  <input id="scriptName" class="script-name" value="ಹೊಸ ಚಿತ್ರಕಥೆ" aria-label="Script title">
   <div class="top-actions">
-    <button class="tool-btn" id="btnFocus">◉ Focus</button>
-    <button class="tool-btn" id="btnShortcuts">⌨</button>
-    <button class="tool-btn" id="btnNew">ಹೊಸದು</button>
-    <button class="tool-btn" id="btnOpen">ತೆರೆ</button>
-    <button class="tool-btn" id="btnDownload">.wbs</button>
-    <button class="tool-btn" id="btnDocx">Word</button>
-    <button class="tool-btn" id="btnExport">PDF</button>
-    <button class="tool-btn primary" id="btnSave">ಉಳಿಸಿ</button>
+    <button id="newBtn" class="tool">ಹೊಸದು</button>
+    <button id="saveBtn" class="tool">ಉಳಿಸಿ</button>
+    <button id="downloadBtn" class="tool">.WBS</button>
+    <button id="printBtn" class="tool">PDF</button>
+    <button id="shortcutsBtn" class="tool">⌨</button>
   </div>
 </header>
-
-<div class="formatbar">
-  <div class="format-group">
-    <span class="format-label">ಬ್ಲಾಕ್</span>
-    <button class="format-btn active" data-type="scene">Scene</button>
-    <button class="format-btn" data-type="action">Action</button>
-    <button class="format-btn" data-type="character">Character</button>
-    <button class="format-btn" data-type="dialogue">Dialogue</button>
-    <button class="format-btn" data-type="parenthetical">Parenthetical</button>
-    <button class="format-btn" data-type="transition">Transition</button>
-  </div>
-  <div class="format-help">Enter ಹೊಸ block · Tab type ಬದಲಿಸಿ · Ctrl+S save</div>
-</div>
-
-<main class="app-shell">
-  <aside class="scene-sidebar" id="sceneSidebar">
-    <div class="side-head"><span>SCENES</span><button id="btnAddScene" title="ಹೊಸ scene">＋</button></div>
+<div class="app">
+  <aside class="leftbar">
+    <div class="side-title">SCENES</div>
     <div id="sceneList" class="scene-list"></div>
-    <div class="side-foot">
-      <div class="language-chip">ಕನ್ನಡ Unicode</div>
-      <div>Native Kannada typing supported</div>
+    <div class="side-bottom">
+      <button id="focusBtn" class="focus-btn">◉ Focus Mode</button>
+      <div class="unicode">ಕನ್ನಡ Unicode<br><span>Typing ready</span></div>
     </div>
   </aside>
 
-  <section class="editor-wrap" id="editorWrap">
-    <div class="editor-scroll" id="editorScroll">
-      <div id="pageStack" class="page-stack"></div>
-    </div>
-    <div class="editor-status">
-      <span id="statScenes">0 scenes</span><span>•</span><span id="statWords">0 words</span><span>•</span><span id="statPages">1 page</span>
-      <span class="status-right" id="saveStatus">Ready</span>
-    </div>
-  </section>
+  <main id="workspace" class="workspace">
+    <div id="pages" class="pages"></div>
+  </main>
 
-  <aside class="tools-sidebar" id="toolsSidebar">
-    <div class="side-head"><span>FORMAT</span><button id="btnCloseTools" title="Hide panel">×</button></div>
-    <div class="type-card" data-type="scene"><b>Scene Heading</b><small>Ctrl+1</small></div>
-    <div class="type-card" data-type="action"><b>Action</b><small>Ctrl+2</small></div>
-    <div class="type-card" data-type="character"><b>Character</b><small>Ctrl+3</small></div>
-    <div class="type-card" data-type="dialogue"><b>Dialogue</b><small>Ctrl+4</small></div>
-    <div class="type-card" data-type="parenthetical"><b>Parenthetical</b><small>Ctrl+5</small></div>
-    <div class="type-card" data-type="transition"><b>Transition</b><small>Ctrl+6</small></div>
-    <div class="tools-note">Tip: screenplay blocks flow automatically across pages. No text is placed outside the paper.</div>
+  <aside class="rightbar">
+    <div class="side-title">FORMAT</div>
+    <button class="format active" data-type="scene"><b>Scene Heading</b><span>Ctrl 1</span></button>
+    <button class="format" data-type="action"><b>Action</b><span>Ctrl 2</span></button>
+    <button class="format" data-type="character"><b>Character</b><span>Ctrl 3</span></button>
+    <button class="format" data-type="dialogue"><b>Dialogue</b><span>Ctrl 4</span></button>
+    <button class="format" data-type="parenthetical"><b>Parenthetical</b><span>Ctrl 5</span></button>
+    <button class="format" data-type="transition"><b>Transition</b><span>Ctrl 6</span></button>
+    <div class="format-help">
+      <div><kbd>Enter</kbd> ಹೊಸ ಸಾಲು</div>
+      <div><kbd>Tab</kbd> format ಬದಲಿಸಿ</div>
+      <div><kbd>Ctrl S</kbd> ಉಳಿಸಿ</div>
+    </div>
   </aside>
-</main>
+</div>
+<footer class="statusbar">
+  <span id="sceneStat">0 scenes</span><span>•</span><span id="wordStat">0 words</span><span>•</span><span id="pageStat">1 page</span>
+  <span class="status-right" id="saveStatus">Local autosave on</span>
+</footer>
 
-<div class="overlay" id="shortcutOverlay"><div class="modal"><h2>Keyboard Shortcuts</h2><div class="shortcut-grid">
-  <span>Enter</span><b>New block</b><span>Tab</span><b>Next block type</b><span>Shift + Tab</span><b>Previous type</b><span>Ctrl + 1–6</span><b>Choose block type</b><span>Ctrl + S</span><b>Save</b><span>Ctrl + D</span><b>Download .wbs</b><span>Backspace</span><b>Delete empty block</b>
-</div><button class="tool-btn" id="btnCloseShortcuts">Close</button></div></div>
-
-<div class="overlay" id="openOverlay"><div class="modal wide"><h2>Open Script</h2><div id="savedScriptsList" class="saved-list"></div><div class="modal-actions"><button class="tool-btn" id="btnUploadFile">Upload .wbs</button><button class="tool-btn" id="btnCloseOpen">Cancel</button></div><input type="file" id="fileInput" accept=".wbs,.json" hidden></div></div>
-
-<div id="toast" class="toast"></div>
-<script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
+<div id="shortcuts" class="modal hidden">
+  <div class="modal-card">
+    <h2>Keyboard Shortcuts</h2>
+    <p><kbd>Enter</kbd> New block</p><p><kbd>Tab</kbd> Change format</p><p><kbd>Shift Tab</kbd> Previous format</p>
+    <p><kbd>Ctrl 1–6</kbd> Choose format</p><p><kbd>Ctrl S</kbd> Save</p>
+    <button id="closeShortcuts" class="tool">Close</button>
+  </div>
+</div>
 <script src="app.js"></script>
 </body>
 </html>
