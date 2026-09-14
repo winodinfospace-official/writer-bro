@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="kn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#121212">
+  <title>Writer Bro — Kannada Screenplay Studio</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span>Writer Bro</span><small>Kannada Screenplay Studio</small></div>
+  <input id="title" class="title" placeholder="Untitled Screenplay" aria-label="Script title">
+  <div class="top-actions">
+    <button id="newBtn">New</button><button id="openBtn">Open</button><button id="saveBtn" class="primary">Save</button>
+    <button id="wbsBtn">Download .wbs</button><button id="wordBtn">Word</button><button id="pdfBtn">Export PDF</button>
+  </div>
+</header>
+<div class="app">
+  <aside class="sidebar left">
+    <div class="side-head"><span>SCENES</span><button id="addScene" title="Add scene">+</button></div>
+    <div id="sceneList" class="scene-list"></div>
+    <div class="left-foot"><div class="tip">Kannada Unicode ready<br><span>Windows Kannada / Google Input Tools both work.</span></div></div>
+  </aside>
+  <main id="workspace" class="workspace">
+    <div id="pages" class="pages"></div>
+  </main>
+  <aside class="sidebar right">
+    <div class="side-head"><span>FORMAT</span></div>
+    <div class="format-list">
+      <button data-type="scene" class="fmt active"><b>Scene Heading</b><small>Ctrl+1</small></button>
+      <button data-type="action" class="fmt"><b>Action</b><small>Ctrl+2</small></button>
+      <button data-type="character" class="fmt"><b>Character</b><small>Ctrl+3</small></button>
+      <button data-type="dialogue" class="fmt"><b>Dialogue</b><small>Ctrl+4</small></button>
+      <button data-type="parenthetical" class="fmt"><b>Parenthetical</b><small>Ctrl+5</small></button>
+      <button data-type="transition" class="fmt"><b>Transition</b><small>Ctrl+6</small></button>
+    </div>
+    <div class="right-foot">
+      <div><b>Shortcuts</b><span>Enter · new block</span><span>Tab · next type</span><span>Shift+Enter · line break</span></div>
+    </div>
+  </aside>
+</div>
+<footer class="status"><span id="saveState">Local autosave on</span><span id="stats">1 page · 0 words</span><span>Kannada Unicode Ready</span></footer>
+<input id="fileInput" type="file" accept=".wbs,.json" hidden>
+<script>
+// Remove any service worker left by older Writer Bro builds so the editor always loads current files.
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister())).catch(()=>{});
+  if (window.caches) caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))).catch(()=>{});
+}
+</script>
+<script src="app.js?v=20260913-01"></script>
+</body>
+</html>
